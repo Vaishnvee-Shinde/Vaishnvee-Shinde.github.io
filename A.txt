@@ -1,0 +1,52 @@
+
+
+ Loading Test:**
+   - **Test Case:** Execute `axiom_gsib_race_load.sh` script.
+   - **Expected Result:** Data should be loaded into the `GSIB_RACE_DATA_STAGE` table without errors.
+
+2. **ICP NONE Test:**
+   - **Test Case:** Query the `GSIB_RACE_DATA_STAGE` table to check if it only contains records with ICP value equal to "NONE."
+   - **Expected Result:** All records in the table should have ICP set to "NONE."
+
+3. **Partition Test:**
+   - **Test Case:** Insert data into the `GSIB_RACE_DATA_STAGE` table and check if it gets loaded into the appropriate partition based on the ICP value.
+   - **Expected Result:** Data should be stored in the corresponding partition based on ICP value (e.g., "JUL23" for ICP "NONE").
+
+4. **Data Source Test:**
+   - **Test Case:** Execute the `ds race_data_staging` data source and verify if it contains both mapped and unmapped processed RACE 
+
+Hi Everyone, 
+#urgentrequirement #immediatepossession
+
+Looking for chill female flatmate in semi-furnished 1 BHK apartment in newly constructed gated society near distance of 2KM from EIO IT Tech Park, 1 KM From Barclays.
+
+Preferred mate:
+1. Only Pure Veg 
+2. Non Smoking 
+3. Non alcoholic 
+4. Working Professionals 
+
+Flat Rent: 15000/2 = 7500
+Deposit: 15000
+Society Maintaince: 2000/2=1000
+Electricity: As per usages
+Wifi: As per usages 
+Initial Setup Cost : 3k ( non refundable)
+
+Amenities:
+1:  Fan 
+2: Light
+3. Modular Kitchen 
+4. Lift
+5. Parking slots  both for 2 & 4 Wheelers
+6. Geyser 
+7. Water RO
+8. Security surveillance
+9. Curtains 
+10. Indian toilet
+11. Shower with hot & clod water
+12. Play Area 
+
+#OnlyWeTwoWillStay 
+
+Please DM for further details.
