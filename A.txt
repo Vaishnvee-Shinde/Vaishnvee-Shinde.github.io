@@ -1,52 +1,117 @@
+#!/bin/bash
 
+# -----------------------------------------------
+# Script for Sending Email with Compression Status
+# -----------------------------------------------
 
- Loading Test:**
-   - **Test Case:** Execute `axiom_gsib_race_load.sh` script.
-   - **Expected Result:** Data should be loaded into the `GSIB_RACE_DATA_STAGE` table without errors.
+# Fetch Reporting Dates and Statuses from Database
+REPORTING_DATES=$(sqlplus -s $REG_LOGIN <<EOF
+SET PAGESIZE 0
+SET TRIM ON
+SET HEAD OFF
+SET FEEDBACK OFF
+SET LINESIZE 1000
+SET ECHO OFF
+WHENEVER SQLERROR EXIT 1
 
-2. **ICP NONE Test:**
-   - **Test Case:** Query the `GSIB_RACE_DATA_STAGE` table to check if it only contains records with ICP value equal to "NONE."
-   - **Expected Result:** All records in the table should have ICP set to "NONE."
+SELECT TO_CHAR(REPORTING_DATE, 'DD-MM-YYYY') || ',' || 'COMPLETED'
+FROM BOE_AXIOM_DATA.COMPRESSION_SCHEDULING_CAL
+WHERE COMPRESSION_FLAG = 'Y' AND MAIL_FLAG = 'N'
+ORDER BY REPORTING_DATE;
 
-3. **Partition Test:**
-   - **Test Case:** Insert data into the `GSIB_RACE_DATA_STAGE` table and check if it gets loaded into the appropriate partition based on the ICP value.
-   - **Expected Result:** Data should be stored in the corresponding partition based on ICP value (e.g., "JUL23" for ICP "NONE").
+EXIT;
+EOF
+)
 
-4. **Data Source Test:**
-   - **Test Case:** Execute the `ds race_data_staging` data source and verify if it contains both mapped and unmapped processed RACE 
+# Clean up the output to remove empty lines
+REPORTING_DATES=$(echo "$REPORTING_DATES" | sed '/^$/d')
 
-Hi Everyone, 
-#urgentrequirement #immediatepossession
+# Check if any reporting dates are available
+if [ -z "$REPORTING_DATES" ]; then
+    echo "No Reporting Periods Found for Sending Email."
+    exit 0
+fi
 
-Looking for chill female flatmate in semi-furnished 1 BHK apartment in newly constructed gated society near distance of 2KM from EIO IT Tech Park, 1 KM From Barclays.
+# -----------------------------------------------
+# Generate HTML Table Content Dynamically
+# -----------------------------------------------
+TABLE_CONTENT=""
+while IFS= read -r LINE; do
+    DATE=$(echo "$LINE" | awk -F',' '{print $1}')  # Extract Reporting Date
+    STATUS=$(echo "$LINE" | awk -F',' '{print $2}') # Extract Compression Status
+    TABLE_CONTENT+="<tr><td style='border: 1px solid black; padding: 5px;'>$DATE</td><td style='border: 1px solid black; padding: 5px;'>$STATUS</td></tr>"
+done <<< "$REPORTING_DATES"
 
-Preferred mate:
-1. Only Pure Veg 
-2. Non Smoking 
-3. Non alcoholic 
-4. Working Professionals 
+# -----------------------------------------------
+# Prepare HTML Email Content
+# -----------------------------------------------
+EMAIL_CONTENT=$(cat <<EOF
+<html>
+<head>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+        }
+        th {
+            background-color: #00AEEF; /* Barclays blue */
+            color: white;
+        }
+        .barclays-classification {
+            text-align: center;
+            font-size: 9px;
+            font-weight: bold;
+            color: #00AEEF; /* Barclays blue */
+        }
+    </style>
+</head>
+<body>
+    <p>Hi All,</p>
+    <p>The compression process has been successfully completed for the following reporting periods:</p>
+    <table style="border: 1px solid black; border-collapse: collapse; width: 100%;">
+        <tr>
+            <th style="border: 1px solid black; padding: 5px;">Reporting Date</th>
+            <th style="border: 1px solid black; padding: 5px;">Compression Status</th>
+        </tr>
+        $TABLE_CONTENT
+    </table>
+    <p class="barclays-classification">barclays classification: restricted - internal</p>
+</body>
+</html>
+EOF
+)
 
-Flat Rent: 15000/2 = 7500
-Deposit: 15000
-Society Maintaince: 2000/2=1000
-Electricity: As per usages
-Wifi: As per usages 
-Initial Setup Cost : 3k ( non refundable)
+# Debugging: Print the email content to verify formatting
+echo "DEBUG: Email Content Generated:"
+echo "$EMAIL_CONTENT"
 
-Amenities:
-1:  Fan 
-2: Light
-3. Modular Kitchen 
-4. Lift
-5. Parking slots  both for 2 & 4 Wheelers
-6. Geyser 
-7. Water RO
-8. Security surveillance
-9. Curtains 
-10. Indian toilet
-11. Shower with hot & clod water
-12. Play Area 
+# -----------------------------------------------
+# Send the Email with HTML Content
+# -----------------------------------------------
+echo "$EMAIL_CONTENT" | mailx -a "Content-Type: text/html" -s "COMPRESSION OF AXIOM TABLES" $MAIL_PURG_NOTIFICATION_ID
 
-#OnlyWeTwoWillStay 
+# Check if the email was sent successfully
+if [ $? -eq 0 ]; then
+    echo "Email sent successfully."
 
-Please DM for further details.
+    # -----------------------------------------------
+    # Update MAIL_FLAG for Processed Reporting Dates
+    # -----------------------------------------------
+    sqlplus -s $REG_LOGIN <<EOF
+SET ECHO OFF
+WHENEVER SQLERROR EXIT 1
+
+UPDATE BOE_AXIOM_DATA.COMPRESSION_SCHEDULING_CAL
+SET MAIL_FLAG = 'Y'
+WHERE COMPRESSION_FLAG = 'Y' AND MAIL_FLAG = 'N';
+COMMIT;
+EXIT;
+EOF
+    echo "Mail Flag Updated to 'Y' for All Processed Reporting Dates."
+else
+    echo "Failed to send email."
+fi
